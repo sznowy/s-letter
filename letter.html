@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To Safa</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Lora:ital,wght@0,400;1,400;1,600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{overflow:hidden;background:#060e20;font-family:'Lora',Georgia,serif;}
+canvas{position:absolute;inset:0;z-index:1;}
+#roseCanvas{position:absolute;inset:0;z-index:5;pointer-events:none;}
+
+/* "To Safa" glowing text overlay — sits INSIDE the heart */
+#toSafaText{
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    z-index:8;
+    text-align:center;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 1.2s ease;
+}
+#toSafaText span{
+    display:block;
+    font-family:'Georgia',serif;
+    font-size:clamp(2.8rem, 7vw, 5rem);
+    font-style:italic;
+    color:#ffffff;
+    letter-spacing:0.12em;
+    text-shadow:
+        0 0 20px rgba(180,220,255,1),
+        0 0 50px rgba(120,190,255,0.9),
+        0 0 100px rgba(80,160,255,0.7),
+        0 0 160px rgba(60,130,255,0.4);
+    animation: textPulse 2.5s ease-in-out infinite alternate;
+}
+@keyframes textPulse{
+    from{text-shadow:0 0 20px rgba(180,220,255,1),0 0 50px rgba(120,190,255,0.9),0 0 100px rgba(80,160,255,0.7);}
+    to{text-shadow:0 0 30px rgba(200,230,255,1),0 0 80px rgba(140,210,255,1),0 0 140px rgba(100,180,255,0.9),0 0 200px rgba(80,150,255,0.5);}
+}
+
+#envelopeContainer{
+    position:absolute;left:50%;top:120%;
+    transform:translateX(-50%);
+    width:320px;height:230px;opacity:0;z-index:10;
+}
+.envelope{position:relative;width:100%;height:100%;}
+.envelope-body{position:absolute;bottom:0;width:100%;height:170px;background:#d8e8ff;border-radius:8px;z-index:3;}
+.flap{position:absolute;top:0;width:0;height:0;border-left:160px solid transparent;border-right:160px solid transparent;border-top:110px solid #bdd6ff;transform-origin:top center;z-index:5;}
+.letter{position:absolute;width:280px;height:190px;background:white;left:20px;bottom:20px;border-radius:6px;z-index:2;box-shadow:0 0 25px rgba(0,0,0,.25);}
+
+/* Paper */
+#paper{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%,-50%) scale(0);
+    width:280px;height:190px;
+    background:linear-gradient(160deg,#fffdf6 0%,#fff8ee 60%,#fdf3e3 100%);
+    border-radius:4px;
+    box-shadow:
+        0 0 0 1px rgba(180,140,80,0.15),
+        0 8px 40px rgba(0,0,0,0.18),
+        0 0 80px rgba(120,190,255,.25),
+        inset 0 0 60px rgba(255,220,150,0.08);
+    z-index:20;overflow:auto;
+    padding:48px 56px 56px 68px;
+}
+
+/* Ruled lines behind text */
+#paper::before{
+    content:'';
+    position:absolute;inset:0;
+    background-image: repeating-linear-gradient(
+        transparent,
+        transparent 37px,
+        rgba(160,180,210,0.18) 37px,
+        rgba(160,180,210,0.18) 38px
+    );
+    background-position: 0 68px;
+    pointer-events:none;
+}
+
+/* Left margin red line */
+#paper::after{
+    content:'';
+    position:absolute;
+    left:52px;top:0;bottom:0;
+    width:1px;
+    background:rgba(220,100,100,0.2);
+    pointer-events:none;
+}
+
+#message{
+    position:relative;
+    color:#2c1e0f;
+    font-family:'Lora',Georgia,serif;
+    font-size:1.05rem;
+    line-height:2.0rem;
+    white-space:pre-wrap;
+    z-index:1;
+}
+
+/* Each line fades + slides in */
+.msg-line{
+    display:block;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity 0.55s ease, transform 0.55s ease;
+}
+.msg-line.visible{
+    opacity:1;
+    transform:translateY(0);
+}
+.msg-line.greeting{
+    font-family:'Pinyon Script',cursive;
+    font-size:1.9rem;
+    color:#8b1a1a;
+    line-height:2.8rem;
+}
+.msg-line.sign-off{
+    font-family:'Pinyon Script',cursive;
+    font-size:1.7rem;
+    color:#8b1a1a;
+    line-height:2.5rem;
+}
+.msg-line.sign-name{
+    font-family:'Pinyon Script',cursive;
+    font-size:1.3rem;
+    color:#a0522d;
+    line-height:2.0rem;
+    margin-top:2px;
+}
+.msg-line.blank{ line-height:0.8rem; min-height:0.8rem; }
+
+.cursor{display:inline-block;width:2px;height:1.1em;background:#8b1a1a;animation:blink .75s infinite;vertical-align:text-bottom;margin-left:1px;}
+@keyframes blink{50%{opacity:0;}}
+
+/* Done button */
+#doneBtn{
+    position:absolute;bottom:40px;left:50%;
+    transform:translateX(-50%) scale(0);
+    z-index:30;
+    background:rgba(255,255,255,0.12);
+    color:white;border:1.5px solid rgba(255,255,255,0.45);
+    padding:14px 38px;border-radius:50px;
+    font-family:'Georgia',serif;font-size:1.1rem;
+    cursor:pointer;backdrop-filter:blur(10px);
+    letter-spacing:0.05em;
+    transition:background 0.3s,box-shadow 0.3s;
+    box-shadow:0 0 24px rgba(255,80,100,0.25);
+}
+#doneBtn:hover{background:rgba(255,120,140,0.2);box-shadow:0 0 40px rgba(255,80,100,0.5);}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<canvas id="roseCanvas"></canvas>
+<div id="toSafaText"><span>To Safa</span></div>
+
+
+<div id="envelopeContainer">
+    <div class="envelope">
+        <div class="letter"></div>
+        <div class="flap" id="flap"></div>
+        <div class="envelope-body"></div>
+    </div>
+</div>
+
+<div id="paper"><div id="message"></div></div>
+<button id="doneBtn">Done Reading? 🌹</button>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   CANVAS SETUP
+═══════════════════════════════════════════════════════════ */
+const canvas  = document.getElementById("canvas");
+const ctx     = canvas.getContext("2d");
+const rCanvas = document.getElementById("roseCanvas");
+const rCtx    = rCanvas.getContext("2d");
+
+function resize(){
+    canvas.width = rCanvas.width = window.innerWidth;
+    canvas.height= rCanvas.height= window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+/* ═══════════════════════════════════════════════════════════
+   PARTICLE HEART — runs from t=0, heart + text together
+═══════════════════════════════════════════════════════════ */
+const particles = [];
+const sparkles  = [];
+const stars     = [];
+const fog       = [];
+
+function heartPt(t){
+    return {
+        x:  16 * Math.pow(Math.sin(t),3),
+        y: -(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))
+    };
+}
+
+/* Heart shell targets */
+for(let i=0;i<2400;i++){
+    const t=Math.random()*Math.PI*2;
+    const p=heartPt(t);
+    particles.push({
+        x:(Math.random()-0.5)*2800,
+        y:(Math.random()-0.5)*2800,
+        tx:p.x*20, ty:p.y*20,
+        phase:Math.random()*Math.PI*2
+    });
+}
+
+/* Sparkles orbiting the heart */
+for(let i=0;i<140;i++){
+    sparkles.push({
+        angle:Math.random()*Math.PI*2,
+        radius:260+Math.random()*160,
+        size:1+Math.random()*3,
+        speed:0.002+Math.random()*0.003
+    });
+}
+
+/* Stars */
+for(let i=0;i<300;i++) stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.2,speed:0.02+Math.random()*0.05});
+
+/* Fog */
+for(let i=0;i<120;i++) fog.push({
+    x:Math.random()*window.innerWidth,
+    y:Math.random()*window.innerHeight,
+    r:20+Math.random()*60,speed:0.1+Math.random()*0.3,alpha:0.02+Math.random()*0.05
+});
+
+/* Show text overlay immediately */
+const toSafaEl = document.getElementById("toSafaText");
+setTimeout(()=>{ toSafaEl.style.opacity = "1"; }, 200);
+
+let animRunning = true;
+let startTime   = performance.now();
+let lastNow     = startTime;
+let phaseTime   = 0;
+// phases: 0=heart+text (0-6s), 1=fadeout(6-8s), then envelope
+let phase = 0;
+
+function animate(now){
+    if(!animRunning) return;
+    const dt = (now-lastNow)/1000;
+    lastNow  = now;
+    phaseTime+= dt;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const cx=canvas.width/2, cy=canvas.height/2;
+
+    /* Stars */
+    ctx.save(); ctx.globalAlpha=0.55;
+    stars.forEach(s=>{
+        const x=(s.x*canvas.width+phaseTime*s.speed*30)%canvas.width;
+        ctx.beginPath();ctx.fillStyle="white";
+        ctx.shadowBlur=6;ctx.shadowColor="white";
+        ctx.arc(x,s.y*canvas.height,s.r,0,Math.PI*2);ctx.fill();
+    });
+    ctx.restore();
+
+    /* Fog */
+    fog.forEach(f=>{
+        f.y-=f.speed;if(f.y<-100)f.y=canvas.height+100;
+        ctx.beginPath();ctx.fillStyle=`rgba(160,220,255,${f.alpha})`;
+        ctx.shadowBlur=40;ctx.shadowColor="#7fd7ff";
+        ctx.arc(f.x,f.y,f.r,0,Math.PI*2);ctx.fill();
+    });
+
+    /* Aurora */
+    ctx.save();ctx.globalAlpha=0.15;
+    for(let i=0;i<3;i++){
+        ctx.beginPath();
+        const g=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+        g.addColorStop(0,"rgba(120,200,255,0)");
+        g.addColorStop(0.5,"rgba(120,220,255,0.25)");
+        g.addColorStop(1,"rgba(80,120,255,0)");
+        ctx.strokeStyle=g;ctx.lineWidth=120;
+        const off=phaseTime*0.3+i*2;
+        for(let x=0;x<canvas.width;x+=80){
+            const y=canvas.height/2+Math.sin(x*0.003+off)*80+Math.cos(off+i)*40;
+            x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    /* Fade out in phase 1 */
+    const fadeOut = phase===1 ? Math.max(0,1-(phaseTime-6)/2) : 1;
+
+    /* Ease-in for first 1.5s */
+    const easeIn = Math.min(1, phaseTime/1.5);
+
+    /* Heartbeat */
+    const hb = 1+Math.sin(phaseTime*2.2)*0.07;
+
+    /* Particles */
+    particles.forEach((p,i)=>{
+        const orb=phaseTime*1.4+i*0.05;
+        p.x+=(p.tx*hb*easeIn+Math.cos(orb)*8-p.x)*0.04;
+        p.y+=(p.ty*hb*easeIn+Math.sin(orb)*8-p.y)*0.04;
+        ctx.beginPath();
+        ctx.shadowBlur=18;ctx.shadowColor="#7fd7ff";
+        ctx.fillStyle=`rgba(150,220,255,${fadeOut})`;
+        ctx.arc(cx+p.x,cy+p.y,2.2,0,Math.PI*2);ctx.fill();
+    });
+
+    /* Sparkles */
+    sparkles.forEach(s=>{
+        const a=s.angle+phaseTime*s.speed*400;
+        ctx.beginPath();ctx.shadowBlur=14;ctx.shadowColor="#fff";
+        ctx.fillStyle=`rgba(255,255,255,${fadeOut*0.75})`;
+        ctx.arc(cx+Math.cos(a)*s.radius,cy+Math.sin(a)*s.radius,s.size,0,Math.PI*2);ctx.fill();
+    });
+
+    /* Phase transitions */
+    if(phase===0 && phaseTime>6){ phase=1; }
+    if(phase===1 && phaseTime>8){
+        toSafaEl.style.opacity="0";
+        animRunning=false;
+        startEnvelope();
+        return;
+    }
+
+    requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+/* ═══════════════════════════════════════════════════════════
+   ENVELOPE SEQUENCE
+═══════════════════════════════════════════════════════════ */
+const envEl  = document.getElementById("envelopeContainer");
+const flapEl = document.getElementById("flap");
+const paper  = document.getElementById("paper");
+const doneBtn= document.getElementById("doneBtn");
+
+function startEnvelope(){
+    envEl.style.opacity=1;
+    envEl.animate([
+        {top:"120%",transform:"translateX(-50%) rotate(-12deg)"},
+        {top:"50%", transform:"translateX(-50%) rotate(0deg)"}
+    ],{duration:2500,easing:"cubic-bezier(.2,.9,.3,1)",fill:"forwards"});
+    setTimeout(openEnvelope,2800);
+}
+function openEnvelope(){
+    flapEl.animate([{transform:"rotateX(0)"},{transform:"rotateX(180deg)"}],{duration:1200,fill:"forwards"});
+    document.querySelector(".letter").animate([{bottom:"20px"},{bottom:"180px"}],{duration:1400,fill:"forwards"});
+    setTimeout(()=>{ removeEnvelope(); expandPaper(); },1700);
+}
+function removeEnvelope(){
+    envEl.animate([
+        {transform:"translateX(-50%) translateY(0)"},
+        {transform:"translateX(-50%) translateY(1200px) rotate(40deg)"}
+    ],{duration:1800,easing:"ease-in",fill:"forwards"});
+}
+function expandPaper(){
+    paper.style.transform="translate(-50%,-50%) scale(1)";
+    paper.animate([
+        {width:"280px",height:"190px"},
+        {width:"90vw", height:"88vh"}
+    ],{duration:2500,easing:"cubic-bezier(.19,1,.22,1)",fill:"forwards"});
+    setTimeout(typeMessage,2600);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LETTER REVEAL — line by line, elegant fade+slide
+═══════════════════════════════════════════════════════════ */
+const lines=[
+    {text:"Safa,",            cls:"greeting"},
+    {text:"",                 cls:"blank"},
+    {text:"I don't tell you this, but sometimes",   cls:""},
+    {text:"I think about you and get scared of",    cls:""},
+    {text:"how much I'd miss you if you were gone.", cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"Since the day I met you, I've liked you", cls:""},
+    {text:"more than I know how to say. You're so", cls:""},
+    {text:"genuine, so kind — and honestly,",       cls:""},
+    {text:"your personality makes you even more",   cls:""},
+    {text:"beautiful than you already are.",        cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"Every time we call and play games,",     cls:""},
+    {text:"I have the time of my life. It sounds",  cls:""},
+    {text:"small, but it genuinely makes my day.",  cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"I never used to smile much.",            cls:""},
+    {text:"You brought that smile back,",           cls:""},
+    {text:"just by being exactly who you are.",     cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"I knew I really liked you when I",       cls:""},
+    {text:"caught myself checking your profile",    cls:""},
+    {text:"every five minutes — and not minding.", cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"I like you a lot, Safa.",               cls:""},
+    {text:"I hope you feel the same way.",         cls:""},
+    {text:"And if you do — would you like",         cls:""},
+    {text:"to be my girlfriend? 🌹",                cls:""},
+    {text:"",                 cls:"blank"},
+    {text:"Forever Yours ❤️",  cls:"sign-off"},
+    {text:"— Akmal", cls:"sign-name"},
+];
+
+function typeMessage(){
+    const target=document.getElementById("message");
+    target.innerHTML="";
+    // Build all lines as hidden spans first
+    lines.forEach(l=>{
+        const span=document.createElement("span");
+        span.className="msg-line"+(l.cls?" "+l.cls:"");
+        span.textContent=l.text||"\u00a0";
+        target.appendChild(span);
+        target.appendChild(document.createTextNode("\n"));
+    });
+    // Reveal each line with a staggered delay
+    const spans=target.querySelectorAll(".msg-line");
+    spans.forEach((span,i)=>{
+        setTimeout(()=>{ span.classList.add("visible"); }, 300+i*160);
+    });
+    // Show done button after all lines revealed
+    const totalDelay=300+lines.length*160+600;
+    setTimeout(showDoneButton, totalDelay);
+}
+
+function showDoneButton(){
+    doneBtn.animate([
+        {transform:"translateX(-50%) scale(0)",opacity:0},
+        {transform:"translateX(-50%) scale(1.05)",opacity:1,offset:0.7},
+        {transform:"translateX(-50%) scale(1)",opacity:1}
+    ],{duration:700,easing:"ease-out",fill:"forwards"});
+    doneBtn.addEventListener("click",onDoneClick,{once:true});
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DONE → ROSE TRANSITION
+═══════════════════════════════════════════════════════════ */
+function onDoneClick(){
+    doneBtn.animate([
+        {transform:"translateX(-50%) scale(1)",opacity:1},
+        {transform:"translateX(-50%) scale(0)",opacity:0}
+    ],{duration:400,fill:"forwards"});
+    paper.animate([
+        {transform:"translate(-50%,-50%) scale(1)",opacity:1},
+        {transform:"translate(-50%,-250%) scale(0.3) rotate(20deg)",opacity:0}
+    ],{duration:1500,easing:"cubic-bezier(.5,0,.8,.3)",fill:"forwards"});
+    setTimeout(startRoseScene,900);
+}
+
+function startRoseScene(){
+    /* Fade body background to deep red */
+    document.body.style.transition="background 3s ease";
+    document.body.style.background="#120008";
+
+    /* Red drift on main canvas */
+    particles.forEach(p=>{
+        p.sx=p.x; p.sy=p.y;
+        const a=Math.random()*Math.PI*2, d=500+Math.random()*400;
+        p.rx=Math.cos(a)*d; p.ry=Math.sin(a)*d;
+    });
+    let redT=performance.now();
+    function redLoop(now){
+        const t=(now-redT)/1000;
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        const cx=canvas.width/2,cy=canvas.height/2;
+        fog.forEach(f=>{
+            f.y-=f.speed*0.4;if(f.y<-100)f.y=canvas.height+100;
+            ctx.beginPath();ctx.fillStyle=`rgba(200,30,50,${f.alpha*0.5})`;
+            ctx.shadowBlur=40;ctx.shadowColor="#ff2050";
+            ctx.arc(f.x,f.y,f.r,0,Math.PI*2);ctx.fill();
+        });
+        const fade=Math.max(0,1-t/2.5);
+        particles.forEach(p=>{
+            const ox=p.sx+(p.rx-p.sx)*Math.min(1,t/2);
+            const oy=p.sy+(p.ry-p.sy)*Math.min(1,t/2);
+            ctx.beginPath();ctx.fillStyle=`rgba(255,60,110,${fade*0.5})`;
+            ctx.arc(cx+ox,cy+oy,2,0,Math.PI*2);ctx.fill();
+        });
+        if(t<3) requestAnimationFrame(redLoop);
+    }
+    requestAnimationFrame(redLoop);
+
+    /* Start rose */
+    roseStartTime=performance.now();
+    requestAnimationFrame(roseLoop);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ROSE — screen-filling, detailed
+═══════════════════════════════════════════════════════════ */
+let roseStartTime=0;
+
+/* Falling petals pool */
+const petals=[];
+for(let i=0;i<50;i++){
+    petals.push({
+        x:(Math.random()-0.5)*300,
+        y:-Math.random()*500-30,
+        vx:(Math.random()-0.5)*1.2,
+        vy:0.6+Math.random()*1.4,
+        rot:Math.random()*Math.PI*2,
+        vr:(Math.random()-0.5)*0.05,
+        size:14+Math.random()*18,
+        alpha:0.45+Math.random()*0.45,
+        born:2+Math.random()*5
+    });
+}
+
+function roseLoop(now){
+    const t=(now-roseStartTime)/1000;
+    rCtx.clearRect(0,0,rCanvas.width,rCanvas.height);
+
+    const bx=rCanvas.width/2;
+    const by=rCanvas.height+10;
+
+    /* Stem grows to ~58% of screen — leaves clear space above for question text */
+    const maxStem = rCanvas.height * 0.58;
+    const stemP   = Math.min(1, t/2.8);
+    const stemH   = maxStem * stemP;
+    const stemTop = by - stemH;
+
+    if(stemP>0){
+        /* Main stem — bezier curve for natural bend */
+        rCtx.save();
+        rCtx.beginPath();
+        rCtx.moveTo(bx, by);
+        rCtx.bezierCurveTo(
+            bx-40, by-stemH*0.35,
+            bx+30, by-stemH*0.65,
+            bx,    stemTop
+        );
+        rCtx.strokeStyle="#2a5e2a";
+        rCtx.lineWidth=10;
+        rCtx.lineCap="round";
+        rCtx.shadowBlur=18;
+        rCtx.shadowColor="#0d2e0d";
+        rCtx.stroke();
+        /* Lighter highlight stripe */
+        rCtx.beginPath();
+        rCtx.moveTo(bx+3, by);
+        rCtx.bezierCurveTo(bx-37,by-stemH*0.35,bx+33,by-stemH*0.65,bx+3,stemTop);
+        rCtx.strokeStyle="rgba(90,160,60,0.35)";
+        rCtx.lineWidth=3;
+        rCtx.stroke();
+        rCtx.restore();
+
+        /* Thorns */
+        if(stemP>0.28){ drawThorn(bx-6, by-stemH*0.24, -38, Math.min(1,(stemP-0.28)/0.14), 18); }
+        if(stemP>0.50){ drawThorn(bx+7, by-stemH*0.46,  35, Math.min(1,(stemP-0.50)/0.14), 16); }
+        if(stemP>0.70){ drawThorn(bx-5, by-stemH*0.66, -32, Math.min(1,(stemP-0.70)/0.12), 14); }
+
+        /* Leaves */
+        if(stemP>0.32){ drawLeaf(bx-5, by-stemH*0.28, -52, Math.min(1,(stemP-0.32)/0.3), 90); }
+        if(stemP>0.55){ drawLeaf(bx+5, by-stemH*0.50,  45, Math.min(1,(stemP-0.55)/0.28),78); }
+        if(stemP>0.72){ drawLeaf(bx-4, by-stemH*0.68, -40, Math.min(1,(stemP-0.72)/0.25),65); }
+    }
+
+    /* Bloom — starts at t=1.8, takes 3.5s to fully open */
+    const bloomDelay=1.8;
+    const bloomP=Math.min(1,Math.max(0,(t-bloomDelay)/3.5));
+
+    if(bloomP>0){
+        drawBloom(rCtx, bx, stemTop, bloomP, t);
+    }
+
+    /* Falling petals */
+    if(bloomP>0.6){
+        petals.forEach(p=>{
+            if(t<p.born) return;
+            p.x +=p.vx+Math.sin(t*0.4+p.rot)*0.5;
+            p.y +=p.vy;
+            p.rot+=p.vr;
+            if(p.y>rCanvas.height+60){ p.y=-60; p.x=(Math.random()-0.5)*300; }
+            rCtx.save();
+            rCtx.translate(bx+p.x, stemTop+p.y);
+            rCtx.rotate(p.rot);
+            rCtx.globalAlpha=p.alpha;
+            drawPetalShape(rCtx, p.size, `hsl(${340+Math.sin(p.rot)*15},78%,52%)`);
+            rCtx.restore();
+        });
+    }
+
+    /* Magic sparkles */
+    if(bloomP>0.4){
+        const bloomR = 150; /* fixed to match rose head size */
+        const count=Math.floor(18*bloomP);
+        for(let i=0;i<count;i++){
+            const ang=(i/count)*Math.PI*2+t*0.65;
+            const dist=bloomR+20+Math.sin(t*1.1+i*0.7)*25;
+            const sx=bx+Math.cos(ang)*dist;
+            const sy=stemTop+Math.sin(ang)*dist;
+            const pulse=0.4+0.6*Math.sin(t*2.8+i*1.5);
+            rCtx.save();
+            rCtx.globalAlpha=pulse*bloomP*0.85;
+            rCtx.shadowBlur=14; rCtx.shadowColor="#ffaacc";
+            rCtx.fillStyle=i%3===0?"#fff":i%3===1?"#ffccdd":"#ffddaa";
+            rCtx.beginPath();rCtx.arc(sx,sy,3,0,Math.PI*2);rCtx.fill();
+            const sl=7*pulse;
+            rCtx.strokeStyle="rgba(255,200,220,0.7)";rCtx.lineWidth=1;
+            rCtx.beginPath();
+            rCtx.moveTo(sx-sl,sy);rCtx.lineTo(sx+sl,sy);
+            rCtx.moveTo(sx,sy-sl);rCtx.lineTo(sx,sy+sl);
+            rCtx.stroke();
+            rCtx.restore();
+        }
+    }
+
+    requestAnimationFrame(roseLoop);
+}
+
+/* ── Thorn ── */
+function drawThorn(x, y, angleDeg, p, len){
+    rCtx.save();
+    rCtx.translate(x,y);
+    rCtx.rotate(angleDeg*Math.PI/180);
+    rCtx.beginPath();
+    rCtx.moveTo(0,0);
+    rCtx.lineTo(len*0.3*p, -len*0.4*p);
+    rCtx.lineTo(len*p, -len*0.6*p);
+    rCtx.strokeStyle="#1a3d1a";
+    rCtx.lineWidth=3;rCtx.lineCap="round";rCtx.lineJoin="round";
+    rCtx.stroke();
+    rCtx.restore();
+}
+
+/* ── Leaf ── */
+function drawLeaf(x, y, angleDeg, p, size){
+    rCtx.save();
+    rCtx.translate(x,y);
+    rCtx.rotate(angleDeg*Math.PI/180);
+    const s=size*p;
+    /* Main leaf body */
+    rCtx.beginPath();
+    rCtx.moveTo(0,0);
+    rCtx.bezierCurveTo(s*0.55,-s*0.35, s*0.95,-s*0.65, 0,-s);
+    rCtx.bezierCurveTo(-s*0.55,-s*0.65,-s*0.35,-s*0.35, 0,0);
+    const lg=rCtx.createLinearGradient(0,0,0,-s);
+    lg.addColorStop(0,"#1a4a1a");
+    lg.addColorStop(0.5,"#2d7a2d");
+    lg.addColorStop(1,"#3a9a3a");
+    rCtx.fillStyle=lg;
+    rCtx.shadowBlur=10;rCtx.shadowColor="#0a2a0a";
+    rCtx.fill();
+    /* Mid vein */
+    rCtx.beginPath();rCtx.moveTo(0,0);rCtx.lineTo(0,-s*0.88);
+    rCtx.strokeStyle="rgba(200,255,180,0.3)";rCtx.lineWidth=1.5;rCtx.stroke();
+    /* Side veins */
+    for(let v=1;v<=3;v++){
+        const vy=-s*(v*0.22);
+        rCtx.beginPath();rCtx.moveTo(0,vy);rCtx.lineTo(s*0.35,vy-s*0.1);
+        rCtx.beginPath();rCtx.moveTo(0,vy);rCtx.lineTo(-s*0.35,vy-s*0.1);
+        rCtx.strokeStyle="rgba(200,255,180,0.18)";rCtx.lineWidth=1;rCtx.stroke();
+    }
+    rCtx.restore();
+}
+
+/* ── Petal shape helper ── */
+function drawPetalShape(ctx, size, color){
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(size*0.55,-size*0.45, size*0.9,-size*0.35, 0,-size);
+    ctx.bezierCurveTo(-size*0.9,-size*0.35,-size*0.55,-size*0.45, 0,0);
+    ctx.fillStyle=color;
+    ctx.fill();
+}
+
+/* ── Full Bloom ── */
+function drawBloom(ctx, cx, cy, p, t){
+    /* Rose bloom — normal rose head size, not screen-filling */
+    const maxR = 140;
+
+    /*  Layer definitions:
+        innerR = petal base radius (how far from centre base starts)
+        outerR = petal tip reach
+        count  = petals in this ring
+        rot    = ring rotation offset
+        hue    = color lightness variation
+    */
+    const layers=[
+        {count:5, innerR:0.06, outerR:0.18, rotOff:0.0,  light:22, sat:80},
+        {count:5, innerR:0.09, outerR:0.30, rotOff:0.35, light:28, sat:82},
+        {count:6, innerR:0.13, outerR:0.44, rotOff:0.15, light:35, sat:84},
+        {count:7, innerR:0.17, outerR:0.57, rotOff:0.48, light:40, sat:82},
+        {count:8, innerR:0.22, outerR:0.72, rotOff:0.22, light:44, sat:80},
+        {count:9, innerR:0.28, outerR:0.88, rotOff:0.55, light:48, sat:76},
+        {count:10,innerR:0.34, outerR:1.00, rotOff:0.08, light:52, sat:72},
+    ];
+
+    const layerReveal = p * layers.length;
+    const sway = Math.sin(t*0.6)*2;
+
+    layers.forEach((layer,li)=>{
+        const lp=Math.min(1,Math.max(0,layerReveal-li));
+        if(lp<=0) return;
+
+        const ir=layer.innerR*maxR;
+        const pr=layer.outerR*maxR*lp;
+
+        for(let i=0;i<layer.count;i++){
+            const baseAng=(i/layer.count)*Math.PI*2 + layer.rotOff + sway*0.015;
+
+            ctx.save();
+            ctx.translate(cx,cy);
+            ctx.rotate(baseAng);
+
+            /* Petal width widens with layer */
+            const wFactor=0.55+li*0.05;
+
+            ctx.beginPath();
+            ctx.moveTo(0,-ir);
+            /* Right edge */
+            ctx.bezierCurveTo(
+                pr*wFactor,  -ir-pr*0.15,
+                pr*wFactor,  -pr*0.82,
+                0,           -pr
+            );
+            /* Left edge */
+            ctx.bezierCurveTo(
+                -pr*wFactor, -pr*0.82,
+                -pr*wFactor, -ir-pr*0.15,
+                0,           -ir
+            );
+
+            /* Gradient: lighter centre, darker edge */
+            const grd=ctx.createRadialGradient(0,-ir-pr*0.1,2, 0,-pr*0.5,pr);
+            grd.addColorStop(0,  `hsl(350,${layer.sat}%,${layer.light+14}%)`);
+            grd.addColorStop(0.5,`hsl(348,${layer.sat}%,${layer.light}%)`);
+            grd.addColorStop(1,  `hsl(345,${layer.sat-6}%,${layer.light-12}%)`);
+            ctx.fillStyle=grd;
+            ctx.shadowBlur=li*4+10;
+            ctx.shadowColor=`rgba(160,0,40,${0.3+li*0.04})`;
+            ctx.fill();
+
+            /* Petal vein / sheen highlight */
+            ctx.beginPath();
+            ctx.moveTo(0,-ir*1.1);
+            ctx.bezierCurveTo(pr*0.1,-pr*0.5, pr*0.05,-pr*0.8, 0,-pr*0.92);
+            ctx.strokeStyle=`rgba(255,200,215,${0.12+li*0.03})`;
+            ctx.lineWidth=1.5;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+    });
+
+    /* Sepal (green calyx) at base of bloom */
+    if(p>0.05){
+        for(let i=0;i<5;i++){
+            const a=(i/5)*Math.PI*2+0.3;
+            ctx.save();
+            ctx.translate(cx,cy);ctx.rotate(a);
+            const sr=maxR*0.18*p;
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.bezierCurveTo(sr*0.4,sr*0.3, sr*0.5,sr*0.7, 0,sr);
+            ctx.bezierCurveTo(-sr*0.5,sr*0.7,-sr*0.4,sr*0.3, 0,0);
+            ctx.fillStyle="#1e5a1e";
+            ctx.shadowBlur=6;ctx.shadowColor="#0a2a0a";
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    /* Centre stamen — golden dome */
+    if(p>0.55){
+        const cp=Math.min(1,(p-0.55)/0.45);
+        const cr=maxR*0.055*cp;
+        ctx.save();ctx.translate(cx,cy);
+        const cg=ctx.createRadialGradient(0,0,0,0,0,cr);
+        cg.addColorStop(0,"#fff4aa");
+        cg.addColorStop(0.4,"#f0c030");
+        cg.addColorStop(0.8,"#c07010");
+        cg.addColorStop(1,"#8b0a1a");
+        ctx.beginPath();ctx.arc(0,0,cr,0,Math.PI*2);
+        ctx.fillStyle=cg;
+        ctx.shadowBlur=20;ctx.shadowColor="#ffcc44";
+        ctx.fill();
+        /* Stamen dots */
+        for(let i=0;i<12;i++){
+            const sa=(i/12)*Math.PI*2;
+            const sd=cr*0.72;
+            ctx.beginPath();
+            ctx.arc(Math.cos(sa)*sd,Math.sin(sa)*sd,cr*0.12,0,Math.PI*2);
+            ctx.fillStyle="#ffee66";ctx.shadowBlur=4;ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+</script>
+</body>
+</html>
